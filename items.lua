@@ -89,7 +89,6 @@ local function return_item(item)
 
   if item.old_bag then
     repeat
-      print('returning item')
       windower.ffxi.put_item(item.old_bag, item.slot)
       coroutine.sleep(2)
       inv_item = windower.ffxi.get_items(item.bag,item.slot)
@@ -213,10 +212,7 @@ local function item_match(item_id, item_table)
     return item_id == item_table.id
   elseif type(item_id) == 'string' then
     local n = fuzzy_name(item_id)
-    return n == fuzzy_name(res.items[item_table.id].en) or
-           n == fuzzy_name(res.items[item_table.id].enl) or
-           n == fuzzy_name(res.items[item_table.id].ja) or
-           n == fuzzy_name(res.items[item_table.id].jal)
+    return n == fuzzy_name(res.items[item_table.id][language])
   end
   return false 
 end
@@ -227,7 +223,7 @@ local function find_items(item_id)
   for bag_id, bag in pairs(res.bags) do
     if all_bags['enabled_'..bag.command] then
       for _, item in ipairs(all_bags[bag.command]) do
-        if item_match(item_id, item) then
+        if item.id ~= 0 and item_match(item_id, item) then
           local item_res = res.items[item.id]
           available_items:append({
             id = item.id,
@@ -322,6 +318,7 @@ end
 local function handle_specific_item(item_name)  
   local found_item = nil
   local all_available_items = find_items(item_name)
+  local user_bags = S(settings.bags)
   for _, item in ipairs(all_available_items) do
     if not found_item then
       if usable_bags[item.bag] or (user_bags[item.bag] and res.bags[item.bag].access == "Everywhere") or (item.res.category == 'Armor' and res.bags[item.bag].equippable) then
