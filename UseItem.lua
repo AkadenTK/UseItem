@@ -22,10 +22,10 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.]]
 
-_addon.name = 'Items'
+_addon.name = 'UseItem'
 _addon.author = 'Akaden; inspired by from20020516 and Chiaia'
 _addon.version = '0.1'
-_addon.commands = {'item', 'use', 'i'}
+_addon.commands = {'useitem', 'use', 'i'}
 
 
 require('logger')
