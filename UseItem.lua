@@ -24,7 +24,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.]]
 
 _addon.name = 'UseItem'
 _addon.author = 'Akaden; inspired by from20020516 and Chiaia'
-_addon.version = '0.1'
+_addon.version = '0.2'
 _addon.commands = {'useitem', 'use', 'i'}
 
 
@@ -43,6 +43,7 @@ local settings = config.load({
   gs_lock_command = 'gs disable',
   gs_unlock_command = 'gs enable',
   announce_delay = 3,
+  debug=false,
 })
 
 local language = string.lower(windower.ffxi.get_info().language)
@@ -52,6 +53,12 @@ local usable_bags = S{0,3} -- inventory or temp
 
 local using_item = nil
 local used_item = nil
+
+local function debug(...)
+  if settings.debug then
+    log('DEBUG', ...)
+  end
+end
 
 local function get_user_slot(item)
   local found_slot
@@ -81,6 +88,7 @@ local function return_item(item)
   if item.equipped_slot then
     gs_unlock(item.equipped_slot)
     while inv_item.status == 5 do
+      debug('Try unequip', item.equipped_slot)
       windower.ffxi.set_equip(0, item.equipped_slot, 0)
       coroutine.sleep(1)
       inv_item = windower.ffxi.get_items(item.bag,item.slot)
@@ -89,8 +97,9 @@ local function return_item(item)
 
   if item.old_bag then
     repeat
+      debug('Try put item back', item.old_bag)
       windower.ffxi.put_item(item.old_bag, item.slot)
-      coroutine.sleep(2)
+      coroutine.sleep(1)
       inv_item = windower.ffxi.get_items(item.bag,item.slot)
     until not inv_item or inv_item.id ~= item.id 
   end
@@ -126,12 +135,13 @@ local function use_item(item)
     log('Item already in use: '..using_item[language])
     return
   end
-  using_item = item
 
   if windower.ffxi.get_player().status > 1 then
-      log('You cannot use items at this time.')
-      return
+    log('You cannot use items at this time.')
+    return
   end
+
+  using_item = item
 
   if (item.res.category == 'Armor' and not res.bags[item.bag].equippable) or (item.res.category == 'Usable' and not usable_bags[item.bag]) then
 
@@ -139,12 +149,18 @@ local function use_item(item)
     local count = 0
     local found_item
     repeat -- obtain the item
-      -- TODO: check for resting to halt the process.
+      
+      if windower.ffxi.get_player().status > 1 then
+        using_item = nil
+        log('You cannot use items at this time.')
+        return
+      end
 
       local new_item = get_exact_item(item, 0)
       if new_item then
         -- item is in inventory
         found_item = new_item
+        break
       else
         local old_item = get_exact_item(item, item.bag)
         if old_item then
@@ -157,7 +173,7 @@ local function use_item(item)
           return
         end
       end
-      coroutine.sleep(1)
+      coroutine.sleep(2)
     until found_item or count > 5
 
     if item.res.category == 'Armor' then
@@ -169,7 +185,11 @@ local function use_item(item)
   local item_previously_equipped = false
   repeat --waiting cast delay
     
-    -- TODO: check for resting to halt the process.
+    if windower.ffxi.get_player().status > 1 then
+      using_item = nil
+      log('You cannot use items at this time.')
+      return
+    end
 
     local inv_item = windower.ffxi.get_items(item.bag,item.slot)
     if item.res.category == 'Armor' and inv_item.status ~= 5 then -- item is not equipped.
@@ -247,7 +267,7 @@ local function find_items(item_id)
 end
 
 
-local function item_is_usable(item)
+local function is_item_usable(item)
   if item.res.category == 'Armor' then
     if item.res.jobs[windower.ffxi.get_player().main_job_id] then
       local ext = extdata.decode(item)
@@ -301,7 +321,7 @@ local function handle_group(group_key)
   -- loop through ordered user_items and find one that's ready
   for _, item in ipairs(all_available_items) do 
     if not available_item then
-      if item_is_usable(item) then
+      if is_item_usable(item) then
         available_item = item
       end
     end
@@ -323,7 +343,7 @@ local function handle_specific_item(item_name)
     if not found_item then
       if usable_bags[item.bag] or (user_bags[item.bag] and res.bags[item.bag].access == "Everywhere") or (item.res.category == 'Armor' and res.bags[item.bag].equippable) then
         -- item is in usable inventory
-        if item_is_usable(item) then
+        if is_item_usable(item) then
           found_item = item
         end
       end
@@ -352,14 +372,14 @@ windower.register_event('addon command', function(...)
   local cmd = args[1]
   if cmd == 'all' then
     table.remove(args, 1)
-    windower.send_ipc_message({table.unpack(args)}:concat(';'))
+    windower.send_ipc_message(T{table.unpack(args)}:concat(';'))
+    process_command(args)
   else
     process_command(args)
   end
 end)
 
 windower.register_event('ipc message', function (msg)
-  local args = T{msg:split(';')}
   process_command(args)
 end)
 
