@@ -372,7 +372,7 @@ windower.register_event('addon command', function(...)
   local cmd = args[1]
   if cmd == 'all' then
     table.remove(args, 1)
-    windower.send_ipc_message(T{table.unpack(args)}:concat(';'))
+    windower.send_ipc_message(args:concat(';'))
     process_command(args)
   else
     process_command(args)
@@ -380,6 +380,7 @@ windower.register_event('addon command', function(...)
 end)
 
 windower.register_event('ipc message', function (msg)
+  local args = msg:split(';')
   process_command(args)
 end)
 
