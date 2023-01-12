@@ -35,8 +35,12 @@ local res = require('resources')
 local config = require('config')
 
 local settings = config.load({
-  order = {
-    warp = {'Warp Ring', 'Warp Cudgel'},
+  groups = {
+    warp = {'Warp Ring', 'Instant Warp', 'Warp Cudgel'},
+    dem = {'Dim. Ring (Dem)'},
+    mea = {'Dim. Ring (Mea)'},
+    holla = {'Dimensional Ring (Holla)'},
+    dim = {'Dimensional Ring (Dem)', 'Dimensional Ring (Mea)','Dimensional Ring (Holla)'},
     rr = {"Pandit's Staff","Super Reraiser","Rebirth Feather","Dusty Reraise","Hi-Reraiser","Revive Feather","Instant Reraise","Reraiser","Scapegoat","Raphael's Rod","Mamool Ja Earring","Airmid's Gorget","Reraise Gorget","Reraise Hairpin","Kocco's Earring","Reraise Earring","Raising Earring","Reraise Ring","Wh. Rarab Cap +1",}
   },
   preferred_slots = {12, 14},
@@ -44,12 +48,10 @@ local settings = config.load({
   gs_lock_command = 'gs disable',
   gs_unlock_command = 'gs enable',
   announce_delay = 3,
-  bag_search_order = {'inventory','satchel','sack','case','wardrobe','wardrobe2','wardrobe3','wardrobe4','wardrobe5','wardrobe6','wardrobe7','wardrobe8'},
   debug=false,
 })
 
 local language = string.lower(windower.ffxi.get_info().language)
-local map = require('map')
 local usable_bags = S{0,3} -- inventory or temp
 
 local using_item = {}
@@ -139,7 +141,7 @@ local function get_user_slot(item)
 end
 
 local function create_state(item, command)
-  if item.res.category == 'Armor' then
+  if item.is_equipment then
     local available_slot = get_user_slot(item)
     if available_slot then
       local s = {
@@ -147,7 +149,7 @@ local function create_state(item, command)
         command = command,
         equip_slot = available_slot,
         original_bag = item.bag,
-        is_armor = true,
+        is_equipment = true,
         target = '<me>',
       }
       using_equip_slot[s.equip_slot] = s
@@ -155,12 +157,12 @@ local function create_state(item, command)
     else
       return nil
     end
-  elseif item.res.category == 'Usable' then
+  elseif item.is_usable then
     local s =  {
       item = item,
       command = command,
       original_bag = item.bag,
-      is_armor = false,
+      is_equipment = false,
       target = '<me>',
     }
     using_item[item.id] = s
@@ -188,13 +190,13 @@ local function prepare_item_state(inv_item, item)
     item.count = inv_item.count
     item.status = inv_item.status
     item.extdata = inv_item.extdata
-    item.is_armor = item.res.category == 'Armor'
+    item.is_equipment = item.res.category == 'Armor' or 'Weapon'
     item.is_usable = item.res.category == 'Usable'
     item.in_bazaar = inv_item.bazaar and inv_item.bazaar > 0
     item.is_equipped = inv_item.status == 5
     local player = windower.ffxi.get_player()
     local player_mob = windower.ffxi.get_mob_by_target('me')
-    if player and player_mob and item.is_armor then
+    if player and player_mob and item.is_equipment then
       item.is_equippable = item.res.jobs[player.main_job_id] and 
                            (not item.res.races or item.res.races[player_mob.race]) and 
                            item.res.level <= player.main_job_level and 
@@ -207,11 +209,12 @@ local function prepare_item_state(inv_item, item)
     else
       item.equipped_slot = nil
     end
-    if item.is_armor then
+    if item.is_equipment then
       local ext = extdata.decode(inv_item)
 
       item.extdata = ext
       item.remaining_activation_time = ext.activation_time + 18000 - os.time()
+      item.charges_remaining = ext.charges_remaining
       item.recharge_remaining = ext.charges_remaining and ext.charges_remaining > 0 and math.max(ext.next_use_time + 18000 - os.time(), 0)
     end
     return item
@@ -239,7 +242,7 @@ local function find_exact_item(item)
       if type(check_item) == 'table' then
         check_item.bag = bag_id
         if check_item and check_item.id == item.id then
-          if item.is_armor and item.extdata and check_item.extdata then
+          if item.is_equipment and item.extdata and check_item.extdata then
             local ext = extdata.decode(check_item)
             if ext and ext.next_use_time == item.extdata.next_use_time then
               return check_item
@@ -264,6 +267,15 @@ local function update_item_state(item, inv_item)
 end
 
 local function clean_up(state)
+
+  if state.item.is_equipment then
+    using_equip_slot[state.equip_slot] = nil
+  else
+    using_item[state.item.id] = nil
+  end
+
+  used_items[state.item.id] = nil
+
   if update_item_state(state.item, get_item(state.item)) then
     gs_unlock(state.item.equipped_slot)
     while state.item.is_equipped do
@@ -281,14 +293,6 @@ local function clean_up(state)
         update_item_state(state.item, get_item(state.item))
       end
     end
-
-    if state.item.is_armor then
-      using_equip_slot[state.equip_slot] = nil
-    else
-      using_item[state.item.id] = nil
-    end
-
-    used_items[state.item.id] = nil
   else
     debug('Could not clean_up item: '..state.item.res[language])
   end
@@ -299,7 +303,7 @@ local function is_player_busy()
 end
 
 local function is_item_in_usable_bag(item)
-  if item.is_armor and res.bags[item.bag].equippable then
+  if item.is_equipment and res.bags[item.bag].equippable then
     return true
   elseif item.is_usable and usable_bags[item.bag] then
     return true
@@ -312,7 +316,7 @@ local function is_item_ready_for_use(item)
 end
 
 local function ensure_equipped(state)
-  if not state.item.is_armor then return true end
+  if not state.item.is_equipment then return true end
 
   if not state.item.is_equipped then
     if state.phase >= phases.EQUIPPED then
@@ -347,7 +351,7 @@ local function do_use(state)
       clean_up(in_use)
     end
 
-    if in_use.item.is_armor and not in_use.item.is_equipped then
+    if in_use.item.is_equipment and not in_use.item.is_equipped then
       debug('do_use equipping')
       ensure_equipped(in_use)
       use_queue:push(in_use)
@@ -455,7 +459,8 @@ local function item_match(item_key, item_id)
     return item_key == item_id
   elseif type(item_key) == 'string' then
     local n = fuzzy_name(item_key)
-    return n == fuzzy_name(res.items[item_id][language])
+    return n == fuzzy_name(res.items[item_id][language]) or 
+           n == fuzzy_name(res.items[item_id][language..'_log'])
   end
   return false 
 end
@@ -463,7 +468,10 @@ end
 local function find_items(item_key)
   local available_items = T{}
   local all_bags = windower.ffxi.get_items()
-  for bag_id, bag in pairs(res.bags) do
+  for bag_id = 0, 100, 1 do
+    local bag = res.bags[bag_id]
+    if bag == nil then break end
+
     if all_bags['enabled_'..bag.command] then
       for _, inv_item in ipairs(all_bags[bag.command]) do
         inv_item.bag = bag_id
@@ -477,44 +485,31 @@ local function find_items(item_key)
 end
 
 local function is_item_usable(item)
-  return (item.is_armor and item.is_equippable ~= false and item.recharge_remaining <= 10) or item.is_usable
+  return (item.is_equipment and item.is_equippable ~= false and item.charges_remaining >= 1 and item.recharge_remaining <= 10) or item.is_usable
 end
 
 local function is_item_accessible(item)
   local user_bags = S(settings.bags)
   return usable_bags[item.bag] or 
-         (item.is_armor and res.bags[item.bag].equippable) or 
+         (item.is_equipment and res.bags[item.bag].equippable) or 
          (user_bags[item.bag] and res.bags[item.bag].access == "Everywhere")
 end
 
 local function handle_group(group_key)
-  local group = map[group_key]
+  local group = settings.groups[group_key]
   local user_items = T{}
   local user_bags = S(settings.bags)
 
   local all_available_items = T{}
   -- add items from group that exist in accessible inventory and are usable
-  for _, item_info in pairs(group) do
-    local available_items = find_items(item_info.id)
+  for _, item_name_or_id in pairs(group) do
+    local available_items = find_items(item_name_or_id)
     for _, item in ipairs(available_items) do
       if is_item_accessible(item) and is_item_usable(item) then
         -- this is in accessible inventory
         all_available_items:append(item)
       end
     end
-  end
-  
-  -- order/filter by user preferences
-  if settings.order[group_key] then
-    local ordered_items = T{}
-    for _, item_id in ipairs(settings.order[group_key]) do
-      for _, item in ipairs(all_available_items) do
-        if item_match(item_id, item.id) then
-          ordered_items:append(item)
-        end
-      end
-    end
-    all_available_items = ordered_items
   end
 
   if #all_available_items > 0 then
@@ -547,7 +542,7 @@ end
 local function process_command(args)
   local cmd = args:concat(' ')
 
-  if map[cmd:lower()] then
+  if settings.groups[cmd:lower()] then
     handle_group(cmd:lower())
   else
     handle_specific_item(cmd:lower())
