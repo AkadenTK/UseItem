@@ -545,7 +545,7 @@ local function handle_specific_item(item_name)
 end
 
 local function process_command(args)
-  local cmd = args[1]
+  local cmd = args:concat(' ')
 
   if map[cmd:lower()] then
     handle_group(cmd:lower())
