@@ -44,7 +44,8 @@ settings = config.load({
     mea = {'Dim. Ring (Mea)'},
     holla = {'Dimensional Ring (Holla)'},
     dim = {'Dimensional Ring (Dem)', 'Dimensional Ring (Mea)','Dimensional Ring (Holla)'},
-    rr = {"Pandit's Staff","Super Reraiser","Rebirth Feather","Dusty Reraise","Hi-Reraiser","Revive Feather","Instant Reraise","Reraiser","Scapegoat","Raphael's Rod","Mamool Ja Earring","Airmid's Gorget","Reraise Gorget","Reraise Hairpin","Kocco's Earring","Reraise Earring","Raising Earring","Reraise Ring","Wh. Rarab Cap +1",}
+    rr = {"Pandit's Staff","Super Reraiser","Rebirth Feather","Dusty Reraise","Hi-Reraiser","Revive Feather","Instant Reraise","Reraiser","Scapegoat","Raphael's Rod","Mamool Ja Earring","Airmid's Gorget","Reraise Gorget","Reraise Hairpin","Kocco's Earring","Reraise Earring","Raising Earring","Reraise Ring","Wh. Rarab Cap +1",},
+    silena = {'Echo Drops', 'Remedy'},
   },
   preferred_slots = {12, 14}, -- right ring and earring
   bags = {5, 6 ,7}, -- satchel, sack, case
