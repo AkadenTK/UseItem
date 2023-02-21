@@ -115,8 +115,8 @@ windower.register_event('action', function(action)
     last_item_start = nil
 
     local item_id = action.param
-    local success = item_id and action.targets and action.targets[1] and action.targets[1].actions and action.targets[1].actions[1] and action.targets[1].actions[1].reaction == 8
-    if success and item_id and used_items[item_id] then
+    
+    if item_id and used_items[item_id] then
       debug_message('item_use_success', used_items[item_id])
       used_items[item_id].phase = phases.USED
       clean_up(used_items[item_id])
