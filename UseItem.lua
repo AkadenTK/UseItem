@@ -24,7 +24,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.]]
 
 _addon.name = 'UseItem'
 _addon.author = 'Akaden; inspired by from20020516 and Chiaia'
-_addon.version = '0.2'
+_addon.version = '0.3'
 _addon.commands = {'useitem', 'use', 'i'}
 
 
@@ -58,7 +58,9 @@ function clean_up(state)
   clean_up_state(state)
 
   if update_item_state(state.item, get_item_from_last_known_bag(state.item)) then
-    enable_gearswap_slot(state.item.equipped_slot)
+    if state.item.equipped_slot then
+      enable_gearswap_slot(state.item.equipped_slot)
+    end
     while state.item.is_equipped do
       windower.ffxi.set_equip(0, state.item.equipped_slot, 0)
       coroutine.sleep(0.5)
