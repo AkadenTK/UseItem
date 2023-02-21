@@ -1,5 +1,6 @@
 
 function get_equipped_slot(item)
+  if not item then print('get_equipped_slot', 'item is nil.', require('debug').traceback()); return end
   local equipment = windower.ffxi.get_items().equipment
   for slot_id, slot in pairs(res.slots) do
     local slot_key = slot.en:lower():gsub(' ', '_')
@@ -13,17 +14,22 @@ function get_equipped_slot(item)
 end
 
 function to_gs_name(slot)
+  if not slot then print('to_gs_name', 'slot is nil.', require('debug').traceback()); return end
   local slot_name = res.slots[slot].en
   return slot_name:gsub(' ', '_'):lower()
 end
 function disable_gearswap_slot(slot)
+  if not slot then print('disable_gearswap_slot', 'slot is nil.', require('debug').traceback()); return end
   windower.send_command(settings.gs_lock_command..' '..to_gs_name(slot))
 end
 function enable_gearswap_slot(slot)
+  if not slot then print('enable_gearswap_slot', 'slot is nil.', require('debug').traceback()); return end
   windower.send_command(settings.gs_unlock_command..' '..to_gs_name(slot))
 end
 
 function get_user_preferred_slot(item, using_equip_slot)
+  if not item then print('get_user_preferred_slot', 'item is nil.', require('debug').traceback()); return end
+  if not using_equip_slot then print('get_user_preferred_slot', 'using_equip_slot is nil.', require('debug').traceback()); return end
   local found_slot
   local user_slots = S{table.unpack(settings.preferred_slots and settings.preferred_slots or {})}
   for slot, _ in pairs(S(item.res.slots)) do
@@ -38,6 +44,7 @@ function get_user_preferred_slot(item, using_equip_slot)
 end
 
 function get_item_from_last_known_bag(item)
+  if not item then print('get_item_from_last_known_bag', 'item is nil.', require('debug').traceback()); return end
   local i = windower.ffxi.get_items(item.bag, item.slot)
   if i and i.id ~= item.id then
     return nil 
@@ -54,22 +61,27 @@ end
 
 local usable_bags = S{0,3} -- inventory or temp
 function is_item_ready_for_use(item)
+  if not item then print('is_item_ready_for_use', 'item is nil.', require('debug').traceback()); return end
   return item.is_usable or (item.recharge_remaining <= 0 and item.remaining_activation_time <= 0)
 end
 function is_item_usable(item)
+  if not item then print('is_item_usable', 'item is nil.', require('debug').traceback()); return end
   return (item.is_equipment and item.is_equippable ~= false and item.charges_remaining >= 1 and item.recharge_remaining <= 10) or item.is_usable
 end
 function is_item_in_usable_inventory(item)
+  if not item then print('is_item_in_usable_inventory', 'item is nil.', require('debug').traceback()); return end
   return usable_bags[item.bag] or 
          (item.is_equipment and res.bags[item.bag].equippable)
 end  
 function is_item_accessible(item)
+  if not item then print('is_item_accessible', 'item is nil.', require('debug').traceback()); return end
   local user_bags = S(settings.bags)
   return is_item_in_usable_inventory(item) or 
          (user_bags[item.bag] and res.bags[item.bag].access == "Everywhere")
 end
 
 function find_item_by_id_and_extdata(item)  
+  if not item then print('find_item_by_id_and_extdata', 'item is nil.', require('debug').traceback()); return end
   for bag_id = 0, 100, 1 do
     local bag = res.bags[bag_id]
     if bag == nil then break end
@@ -136,6 +148,7 @@ function prepare_item_state(inv_item, item)
 end
 
 function update_item_state(item, inv_item)
+  if not item then print('update_item_state', 'item is nil.', require('debug').traceback()); return end
   inv_item = inv_item or find_item_by_id_and_extdata(item)
   if inv_item then
     prepare_item_state(inv_item, item)
@@ -145,6 +158,7 @@ function update_item_state(item, inv_item)
 end
 
 function ensure_equipped(state)
+  if not state then print('ensure_equipped', 'state is nil.', require('debug').traceback()); return end
   if not state.item.is_equipment then return true end
 
   if not state.item.is_equipped then
@@ -161,10 +175,12 @@ function ensure_equipped(state)
 end
 
 local function fuzzy_name(item_name)
+  if not item_name then print('fuzzy_name', 'item_name is nil.', require('debug').traceback()); return end
   return item_name:lower()
 end
 
 local function item_match(item_key, item_id)
+  if not item_key then print('item_match', 'item_key is nil.', require('debug').traceback()); return end
   if type(item_key) == 'number' then
     return item_key == item_id
   elseif type(item_key) == 'string' then
@@ -176,6 +192,7 @@ local function item_match(item_key, item_id)
 end
 
 function find_items(item_key)
+  if not item_key then print('find_items', 'item_key is nil.', require('debug').traceback()); return end
   local available_items = T{}
   local all_bags = windower.ffxi.get_items()
   for bag_id = 0, 100, 1 do
